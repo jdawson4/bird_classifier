@@ -12,6 +12,7 @@ import tensorflow as tf
 seed=8
 num_channels=3
 batch_size=32
+image_size=0
 
 initializer = keras.initializers.RandomNormal(seed=seed)
 

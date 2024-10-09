@@ -1,0 +1,14 @@
+# Author: Jacob Dawson
+# Make sure not to include the images--there are gigabytes of info in there!
+train_imgs/
+ckpts/
+
+# we do not need pycache:
+__pycache__/
+
+# ignore this, it's just vscode being weird
+.vscode/
+
+# don't need compressed things
+*.zip
+*.tgz

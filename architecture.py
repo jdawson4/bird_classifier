@@ -13,6 +13,7 @@ seed = 8
 num_channels = 3
 batch_size = 32
 image_size = 0
+train_imgs_folder = "train_imgs/"
 
 initializer = keras.initializers.RandomNormal(seed=seed)
 

@@ -1,6 +1,7 @@
 # Author: Jacob Dawson
 # Make sure not to include the images--there are gigabytes of info in there!
 train_imgs/
+Masked_Images/
 *.jpg
 
 # also don't need the checkpoints:

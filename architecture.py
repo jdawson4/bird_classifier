@@ -7,6 +7,11 @@
 
 from tensorflow import keras
 import tensorflow as tf
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import os
+from PIL import Image
 
 # CONSTANTS!
 seed = 8

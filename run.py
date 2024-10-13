@@ -116,33 +116,63 @@ for dir in os.listdir("Masked_Images/train/"):
     bird_name_number_tuples.append((name_of_bird, number_of_bird))
 
 
-# make a function for reading from our train, val, and test directories:
-def make_gen_func(type_dir):
+# make functions for reading from our train, val, and test directories.
+# Repeated because tf requires this to take no arguments, for some reason.
+def train_gen(type_dir="Masked_Images/train"):
     for dir in os.listdir(f"{type_dir}/"):
         name_of_bird = dir.split(".")[1]
         number_of_bird = bird_names_to_numbers[name_of_bird]
         for img in os.listdir(f"{type_dir}/{dir}/"):
-            yield np.array(Image.open(f"{type_dir}/{dir}/{img}")), number_of_bird
+            loaded_img = np.array(Image.open(f"{type_dir}/{dir}/{img}"))
+            # print(type(loaded_img),loaded_img.shape, loaded_img.dtype, type(number_of_bird))
+            # <class 'numpy.ndarray'> (223, 320, 3) uint8 <class 'int'>
+            yield loaded_img, number_of_bird
 
 
-train_gen = make_gen_func("Masked_Images/train")
-test_gen = make_gen_func("Masked_Images/test")
-val_gen = make_gen_func("Masked_Images/valid")
+def test_gen(type_dir="Masked_Images/test"):
+    for dir in os.listdir(f"{type_dir}/"):
+        name_of_bird = dir.split(".")[1]
+        number_of_bird = bird_names_to_numbers[name_of_bird]
+        for img in os.listdir(f"{type_dir}/{dir}/"):
+            loaded_img = np.array(Image.open(f"{type_dir}/{dir}/{img}"))
+            # print(type(loaded_img),loaded_img.shape, loaded_img.dtype, type(number_of_bird))
+            # <class 'numpy.ndarray'> (223, 320, 3) uint8 <class 'int'>
+            yield loaded_img, number_of_bird
 
-# test the outputs of that generator:
-"""
-img, label = next(train_gen)
-print(type(img),img.shape, img.dtype, type(label))
-# <class 'numpy.ndarray'> (223, 320, 3) uint8 <class 'int'>
-plt.imshow(img)
-plt.show()
-"""
 
-"""
+def val_gen(type_dir="Masked_Images/val"):
+    for dir in os.listdir(f"{type_dir}/"):
+        name_of_bird = dir.split(".")[1]
+        number_of_bird = bird_names_to_numbers[name_of_bird]
+        for img in os.listdir(f"{type_dir}/{dir}/"):
+            loaded_img = np.array(Image.open(f"{type_dir}/{dir}/{img}"))
+            # print(type(loaded_img),loaded_img.shape, loaded_img.dtype, type(number_of_bird))
+            # <class 'numpy.ndarray'> (223, 320, 3) uint8 <class 'int'>
+            yield loaded_img, number_of_bird
+
+
 train_ds = tf.data.Dataset.from_generator(
     train_gen,
     output_signature=(
-        tf.TensorSpec(shape=(), dtype=tf.int32),
-        tf.RaggedTensorSpec(shape=(2, None), dtype=tf.int32)
-    )
-)"""
+        tf.TensorSpec(shape=(), dtype=tf.float32),
+        tf.TensorSpec(shape=(None, None, num_channels), dtype=tf.float32),
+    ),
+)
+test_ds = tf.data.Dataset.from_generator(
+    test_gen,
+    output_signature=(
+        tf.TensorSpec(shape=(), dtype=tf.float32),
+        tf.TensorSpec(shape=(None, None, num_channels), dtype=tf.float32),
+    ),
+)
+val_ds = tf.data.Dataset.from_generator(
+    val_gen,
+    output_signature=(
+        tf.TensorSpec(shape=(), dtype=tf.float32),
+        tf.TensorSpec(shape=(None, None, num_channels), dtype=tf.float32),
+    ),
+)
+
+# print(f"Cardinality of train set: {train_ds.cardinality()}")
+# print(f"Cardinality of test set: {test_ds.cardinality()}")
+# print(f"Cardinality of val set: {val_ds.cardinality()}")

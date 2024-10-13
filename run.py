@@ -82,25 +82,42 @@ def mask_image(directories):
 
 #mask_image(directories)
 
-def train_gen():
-    for dir in os.listdir("Masked_Images/train/"):
-        print(dir)
-        for img in os.listdir(f"Masked_Images/train/{dir}/"):
-            print(img)
-            return
+# give each directory (bird species) a number:
+number_of_bird = 0
+bird_names_to_numbers = {}
+bird_numbers_to_names = {}
+bird_name_number_tuples = []
+for dir in os.listdir("Masked_Images/train/"):
+    name_of_bird = dir.split(".")[1]
+    bird_names_to_numbers[name_of_bird] = number_of_bird
+    bird_numbers_to_names[number_of_bird] = name_of_bird
+    bird_name_number_tuples.append((name_of_bird, number_of_bird))
 
-train_gen()
-#train_ds = tf.data.Dataset.
+# make a function for reading from our train, val, and test directories:
+def make_gen_func(type_dir):
+    for dir in os.listdir(f"{type_dir}/"):
+        name_of_bird = dir.split(".")[1]
+        number_of_bird = bird_names_to_numbers[name_of_bird]
+        for img in os.listdir(f"{type_dir}/{dir}/"):
+            yield np.array(Image.open(f'{type_dir}/{dir}/{img}')), number_of_bird
+train_gen = make_gen_func("Masked_Images/train")
+test_gen = make_gen_func("Masked_Images/test")
+val_gen = make_gen_func("Masked_Images/valid")
+
+# test the outputs of that generator:
+"""
+img, label = next(train_gen)
+print(type(img),img.shape, img.dtype, type(label))
+# <class 'numpy.ndarray'> (223, 320, 3) uint8 <class 'int'>
+plt.imshow(img)
+plt.show()
+"""
 
 """
-train_imgs = keras.utils.image_dataset_from_directory(
-    "train_imgs/",
-    labels=None,
-    color_mode="rgb",
-    batch_size=batch_size,
-    image_size=(image_size, image_size),
-    shuffle=True,
-    interpolation="bilinear",
-    seed=seed,
-)
-"""
+train_ds = tf.data.Dataset.from_generator(
+    train_gen,
+    output_signature=(
+        tf.TensorSpec(shape=(), dtype=tf.int32),
+        tf.RaggedTensorSpec(shape=(2, None), dtype=tf.int32)
+    )
+)"""

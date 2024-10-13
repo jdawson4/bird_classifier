@@ -10,20 +10,29 @@ print(f"Number of GPUs available: {num_gpus}")
 # 1. fix the 'gpus not found' issue
 # 2. figure out how to make a dataset that will traverse our train_imgs folder
 
-directories=sorted([d for d in os.listdir("train_imgs\CUB_200_2011\images") if os.path.isdir(os.path.join("train_imgs\CUB_200_2011\images", d))])
-#print(directories)
+directories = sorted(
+    [
+        d
+        for d in os.listdir("train_imgs\CUB_200_2011\images")
+        if os.path.isdir(os.path.join("train_imgs\CUB_200_2011\images", d))
+    ]
+)
+# print(directories)
 
+
+# took this function from here https://www.kaggle.com/code/ikkiocean/bird-species-classification-using-dl/notebook
+# because I've never done image masking before.
 def mask_image(directories):
-    os.makedirs('Masked_Images', exist_ok=True)
-    
+    os.makedirs("Masked_Images", exist_ok=True)
+
     for directory in directories:
-        img_directory = f'train_imgs\CUB_200_2011\images\{directory}'
+        img_directory = f"train_imgs\CUB_200_2011\images\{directory}"
         print(img_directory)
         img_files = sorted(os.listdir(img_directory))
-        jpg_files = [img for img in img_files if img.endswith('.jpg')]
-        seg_directory = f'train_imgs\segmentations\{directory}' 
+        jpg_files = [img for img in img_files if img.endswith(".jpg")]
+        seg_directory = f"train_imgs\segmentations\{directory}"
         seg_files = sorted(os.listdir(seg_directory))
-        png_files = [img for img in seg_files if img.endswith('.png')]
+        png_files = [img for img in seg_files if img.endswith(".png")]
         jpg_files = sorted(jpg_files)
         png_files = sorted(png_files)
         indexes = np.arange(len(jpg_files))
@@ -43,16 +52,24 @@ def mask_image(directories):
         print("Train indexes:", train_subset)
         print("Validation indexes:", validation_subset)
         print("Test indexes:", test_indexes)
-        split_indexes = [train_subset,validation_subset,test_indexes]
-        split_dir = ['train','valid','test']
+        split_indexes = [train_subset, validation_subset, test_indexes]
+        split_dir = ["train", "valid", "test"]
         jpg_array = np.array(jpg_files)
         png_array = np.array(png_files)
         for i in range(3):
             masked_image_count = 0
-            for jpg_file,png_file in zip(jpg_array[split_indexes[i]],png_array[split_indexes[i]]):
-            # Load the original image and mask using Pillow
-                image = Image.open(f'train_imgs\CUB_200_2011\images\{directory}\{jpg_file}')
-                mask = Image.open(f'train_imgs\segmentations\{directory}\{png_file}').convert('L')  # Convert mask to grayscale
+            for jpg_file, png_file in zip(
+                jpg_array[split_indexes[i]], png_array[split_indexes[i]]
+            ):
+                # Load the original image and mask using Pillow
+                image = Image.open(
+                    f"train_imgs\CUB_200_2011\images\{directory}\{jpg_file}"
+                )
+                mask = Image.open(
+                    f"train_imgs\segmentations\{directory}\{png_file}"
+                ).convert(
+                    "L"
+                )  # Convert mask to grayscale
 
                 # Ensure the mask has the same size as the image
                 mask = mask.resize(image.size)
@@ -75,12 +92,17 @@ def mask_image(directories):
                 masked_image = Image.fromarray(np.uint8(masked_image_array))
 
                 # Optionally save the result
-                os.makedirs(f'Masked_Images/{split_dir[i]}/{directory}', exist_ok=True)
-                masked_image.save(f'Masked_Images/{split_dir[i]}/{directory}/{jpg_file}')
+                os.makedirs(f"Masked_Images/{split_dir[i]}/{directory}", exist_ok=True)
+                masked_image.save(
+                    f"Masked_Images/{split_dir[i]}/{directory}/{jpg_file}"
+                )
                 masked_image_count += 1
-                print(f'Masking {jpg_file} {split_dir[i]} completed - {masked_image_count}')
+                print(
+                    f"Masking {jpg_file} {split_dir[i]} completed - {masked_image_count}"
+                )
 
-#mask_image(directories)
+
+# mask_image(directories)
 
 # give each directory (bird species) a number:
 number_of_bird = 0
@@ -93,13 +115,16 @@ for dir in os.listdir("Masked_Images/train/"):
     bird_numbers_to_names[number_of_bird] = name_of_bird
     bird_name_number_tuples.append((name_of_bird, number_of_bird))
 
+
 # make a function for reading from our train, val, and test directories:
 def make_gen_func(type_dir):
     for dir in os.listdir(f"{type_dir}/"):
         name_of_bird = dir.split(".")[1]
         number_of_bird = bird_names_to_numbers[name_of_bird]
         for img in os.listdir(f"{type_dir}/{dir}/"):
-            yield np.array(Image.open(f'{type_dir}/{dir}/{img}')), number_of_bird
+            yield np.array(Image.open(f"{type_dir}/{dir}/{img}")), number_of_bird
+
+
 train_gen = make_gen_func("Masked_Images/train")
 test_gen = make_gen_func("Masked_Images/test")
 val_gen = make_gen_func("Masked_Images/valid")

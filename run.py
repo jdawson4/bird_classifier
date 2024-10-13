@@ -151,28 +151,79 @@ def val_gen(type_dir="Masked_Images/val"):
             yield loaded_img, number_of_bird
 
 
-train_ds = tf.data.Dataset.from_generator(
-    train_gen,
-    output_signature=(
-        tf.TensorSpec(shape=(), dtype=tf.float32),
-        tf.TensorSpec(shape=(None, None, num_channels), dtype=tf.float32),
-    ),
+def rescale(image, label):
+    image = image / 255.0
+    return image, label
+
+
+def augment(image, label):
+    image, label = rescale(image, label)
+    image = tf.image.resize_with_crop_or_pad(image, 500, 500)
+    largest_axis = tf.math.maximum(tf.shape(image))
+    image = tf.image.stateless_random_crop(
+        image, size=[largest_axis, largest_axis, 3], seed=seed
+    )
+    image = tf.image.stateless_random_brightness(image, max_delta=0.5, seed=seed)
+    image = tf.clip_by_value(image, 0, 1)
+    return image, label
+
+
+# turn those generators into datasets, which we can then batch and augment and whatnot
+train_ds = (
+    tf.data.Dataset.from_generator(
+        train_gen,
+        output_signature=(
+            tf.TensorSpec(shape=(), dtype=tf.float32),
+            tf.TensorSpec(shape=(None, None, num_channels), dtype=tf.float32),
+        ),
+    )
+    .batch(batch_size)
+    .prefetch(tf.data.AUTOTUNE)
+    # .map(augment, num_parallel_calls=tf.data.AUTOTUNE)
 )
-test_ds = tf.data.Dataset.from_generator(
-    test_gen,
-    output_signature=(
-        tf.TensorSpec(shape=(), dtype=tf.float32),
-        tf.TensorSpec(shape=(None, None, num_channels), dtype=tf.float32),
-    ),
+test_ds = (
+    tf.data.Dataset.from_generator(
+        test_gen,
+        output_signature=(
+            tf.TensorSpec(shape=(), dtype=tf.float32),
+            tf.TensorSpec(shape=(None, None, num_channels), dtype=tf.float32),
+        ),
+    )
+    .batch(batch_size)
+    .prefetch(tf.data.AUTOTUNE)
+    # .map(rescale, num_parallel_calls=tf.data.AUTOTUNE)
 )
-val_ds = tf.data.Dataset.from_generator(
-    val_gen,
-    output_signature=(
-        tf.TensorSpec(shape=(), dtype=tf.float32),
-        tf.TensorSpec(shape=(None, None, num_channels), dtype=tf.float32),
-    ),
+val_ds = (
+    tf.data.Dataset.from_generator(
+        val_gen,
+        output_signature=(
+            tf.TensorSpec(shape=(), dtype=tf.float32),
+            tf.TensorSpec(shape=(None, None, num_channels), dtype=tf.float32),
+        ),
+    )
+    .batch(batch_size)
+    .prefetch(tf.data.AUTOTUNE)
+    # .map(rescale, num_parallel_calls=tf.data.AUTOTUNE)
 )
 
 # print(f"Cardinality of train set: {train_ds.cardinality()}")
 # print(f"Cardinality of test set: {test_ds.cardinality()}")
 # print(f"Cardinality of val set: {val_ds.cardinality()}")
+
+bird_model = model()
+bird_model.summary()
+"""
+bird_model.compile(
+    optimizer='adam',
+    loss='categorical_crossentropy',
+    metrics=['accuracy']
+)
+
+history = bird_model.fit(
+    train_ds,
+    validation_data=val_ds,
+    epochs=10,
+    verbose=1,
+    callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_loss',patience=10)]
+)
+"""

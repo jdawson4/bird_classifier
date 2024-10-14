@@ -6,10 +6,6 @@ physical_devices = tf.config.experimental.list_physical_devices("GPU")
 num_gpus = len(physical_devices)
 print(f"Number of GPUs available: {num_gpus}")
 
-# TODO:
-# 1. fix the 'gpus not found' issue
-# 2. figure out how to make a dataset that will traverse our train_imgs folder
-
 directories = sorted(
     [
         d
@@ -152,11 +148,13 @@ def val_gen(type_dir="Masked_Images/val"):
 
 
 def rescale(image, label):
+    # TODO: fix this!
     image = image / 255.0
     return image, label
 
 
 def augment(image, label):
+    # TODO: fix this!
     image, label = rescale(image, label)
     image = tf.image.resize_with_crop_or_pad(image, 500, 500)
     largest_axis = tf.math.maximum(tf.shape(image))

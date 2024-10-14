@@ -24,27 +24,63 @@ initializer = keras.initializers.RandomNormal(seed=seed)
 
 
 def downsample(input, filters, size=2, stride=2, apply_batchnorm=True):
-    out = keras.layers.Conv2D(
+    # 3 convolutional layers
+    conv1 = keras.layers.Conv2D(
         filters,
         kernel_size=size,
         strides=stride,
         padding="same",
         kernel_initializer=initializer,
+        activation="selu",
     )(input)
+    conv2 = keras.layers.Conv2D(
+        filters,
+        kernel_size=size,
+        strides=stride,
+        padding="same",
+        kernel_initializer=initializer,
+        activation="selu",
+    )(conv1)
+    conv3 = keras.layers.Conv2D(
+        filters,
+        kernel_size=size,
+        strides=stride,
+        padding="same",
+        kernel_initializer=initializer,
+        activation="selu",
+    )(conv2)
+
+    # concatenate those together
+    out = keras.layers.Concatenate()([conv1,conv2,conv3])
+
+    # then downsample. Couldn't decide on one method, so do both!
+    maxpool_downsample = keras.layers.MaxPool2D(pool_size=(2,2), strides=(1,1), padding="valid")(out)
+    conv_downsample = keras.layers.Conv2D(
+        filters,
+        kernel_size=(4,4),
+        strides=2,
+        padding="valid",
+        kernel_initializer=initializer,
+        activation="selu",
+    )(out)
+    out = keras.layers.Concatenate()([maxpool_downsample,conv_downsample])
+
+    # batchnorm if we want
     if apply_batchnorm:
         out = keras.layers.BatchNormalization()(out)
-    out = keras.layers.Activation("selu")(out)
     return out
 
 
 def model():
     input = keras.layers.Input(shape=(None, None, num_channels), dtype=tf.float32)
-    scale = keras.layers.Rescaling(1.0 / 255.0, offset=0)(input)
-    d1 = downsample(scale, 8, 2, apply_batchnorm=False)
-    d2 = downsample(input=d1, filters=16, size=2)
-    d3 = downsample(input=d2, filters=32, size=2)
-    d4 = downsample(input=d3, filters=64, size=2)
-    out = keras.layers.Rescaling(255.0)(d4)
+    out = downsample(input=input, filters=16, size=2, apply_batchnorm=False) # assuming a size of 200x200
+    out = downsample(input=out, filters=32, size=3) # 100 across
+    out = downsample(input=out, filters=64, size=3) # 50 across
+    out = downsample(input=out, filters=128, size=3) # 25 across
+    out = keras.layers.Flatten()(out)
+    out=keras.layers.Dense(units=1024)(out)
+    out = keras.layers.BatchNormalization()(out)
+    out=keras.layers.Dense(units=200)(out)
     return keras.Model(inputs=input, outputs=out, name="bird_classifier")
 
 
@@ -54,3 +90,11 @@ if __name__ == "__main__":
     m.summary()
     # this next line require graphviz, the bane of my existence
     # keras.utils.plot_model(m, to_file='bird_classifier_plot.png', show_shapes=True, show_layer_names=False, show_layer_activations=True, expand_nested=True)
+
+    # you can use these for reverance if you want:
+    #vgg16 = keras.applications.VGG16()
+    #vgg16.summary()
+    #incresnet = keras.applications.InceptionResNetV2()
+    #incresnet.summary()
+    #resnet = keras.applications.InceptionV3()
+    #resnet.summary()

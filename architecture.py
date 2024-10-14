@@ -23,7 +23,7 @@ train_imgs_folder = "train_imgs/"
 initializer = keras.initializers.RandomNormal(seed=seed)
 
 
-def downsample(input, filters, size=2, stride=2, apply_batchnorm=True):
+def downsample(input, filters, size=2, stride=1, apply_batchnorm=True):
     # 3 convolutional layers
     conv1 = keras.layers.Conv2D(
         filters,
@@ -54,10 +54,10 @@ def downsample(input, filters, size=2, stride=2, apply_batchnorm=True):
     out = keras.layers.Concatenate()([conv1,conv2,conv3])
 
     # then downsample. Couldn't decide on one method, so do both!
-    maxpool_downsample = keras.layers.MaxPool2D(pool_size=(2,2), strides=(1,1), padding="valid")(out)
+    maxpool_downsample = keras.layers.MaxPool2D(pool_size=(2,2), strides=(2,2), padding="valid")(out)
     conv_downsample = keras.layers.Conv2D(
         filters,
-        kernel_size=(4,4),
+        kernel_size=(2,2),
         strides=2,
         padding="valid",
         kernel_initializer=initializer,
@@ -72,14 +72,30 @@ def downsample(input, filters, size=2, stride=2, apply_batchnorm=True):
 
 
 def model():
-    input = keras.layers.Input(shape=(None, None, num_channels), dtype=tf.float32)
-    out = downsample(input=input, filters=16, size=2, apply_batchnorm=False) # assuming a size of 200x200
-    out = downsample(input=out, filters=32, size=3) # 100 across
-    out = downsample(input=out, filters=64, size=3) # 50 across
-    out = downsample(input=out, filters=128, size=3) # 25 across
-    out = keras.layers.Flatten()(out)
-    out=keras.layers.Dense(units=1024)(out)
+    input = keras.layers.Input(shape=(500, 500, num_channels), dtype=tf.float32)
+    out = downsample(input=input, filters=16, size=3, apply_batchnorm=False)
+    out = downsample(input=out, filters=32, size=3)
+    out = downsample(input=out, filters=64, size=3)
+    out = downsample(input=out, filters=128, size=3)
+    out = keras.layers.Conv2D(
+        256,
+        kernel_size=(4,4),
+        strides=4,
+        padding="valid",
+        kernel_initializer=initializer,
+        activation="selu",
+    )(out)
     out = keras.layers.BatchNormalization()(out)
+    out = keras.layers.Conv2D(
+        512,
+        kernel_size=(4,4),
+        strides=4,
+        padding="valid",
+        kernel_initializer=initializer,
+        activation="selu",
+    )(out)
+    out = keras.layers.BatchNormalization()(out)
+    out = keras.layers.Flatten()(out)
     out=keras.layers.Dense(units=200)(out)
     return keras.Model(inputs=input, outputs=out, name="bird_classifier")
 

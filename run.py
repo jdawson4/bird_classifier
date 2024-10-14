@@ -141,25 +141,25 @@ def val_gen(type_dir="Masked_Images/val"):
         name_of_bird = dir.split(".")[1]
         number_of_bird = bird_names_to_numbers[name_of_bird]
         for img in os.listdir(f"{type_dir}/{dir}/"):
-            loaded_img = np.array(Image.open(f"{type_dir}/{dir}/{img}"))
-            # print(type(loaded_img),loaded_img.shape, loaded_img.dtype, type(number_of_bird))
-            # <class 'numpy.ndarray'> (223, 320, 3) uint8 <class 'int'>
+            loaded_img = np.array(
+                Image.open(f"{type_dir}/{dir}/{img}"), dtype=np.float32
+            )
             yield loaded_img, number_of_bird
 
 
 def rescale(image, label):
     # TODO: fix this!
+    image = tf.image.resize_with_crop_or_pad(image, image_size, image_size)
     image = image / 255.0
     return image, label
 
 
 def augment(image, label):
     # TODO: fix this!
+    print(tf.shape(image), tf.shape(label))
     image, label = rescale(image, label)
-    image = tf.image.resize_with_crop_or_pad(image, 500, 500)
-    largest_axis = tf.math.maximum(tf.shape(image))
     image = tf.image.stateless_random_crop(
-        image, size=[largest_axis, largest_axis, 3], seed=seed
+        image, size=[image_size, image_size, num_channels], seed=seed
     )
     image = tf.image.stateless_random_brightness(image, max_delta=0.5, seed=seed)
     image = tf.clip_by_value(image, 0, 1)
@@ -171,37 +171,43 @@ train_ds = (
     tf.data.Dataset.from_generator(
         train_gen,
         output_signature=(
+            tf.TensorSpec(
+                shape=(image_size, image_size, num_channels), dtype=tf.float32
+            ),
             tf.TensorSpec(shape=(), dtype=tf.float32),
-            tf.TensorSpec(shape=(None, None, num_channels), dtype=tf.float32),
         ),
     )
+    .map(rescale, num_parallel_calls=tf.data.AUTOTUNE)
     .batch(batch_size)
     .prefetch(tf.data.AUTOTUNE)
-    # .map(augment, num_parallel_calls=tf.data.AUTOTUNE)
 )
 test_ds = (
     tf.data.Dataset.from_generator(
         test_gen,
         output_signature=(
+            tf.TensorSpec(
+                shape=(image_size, image_size, num_channels), dtype=tf.float32
+            ),
             tf.TensorSpec(shape=(), dtype=tf.float32),
-            tf.TensorSpec(shape=(None, None, num_channels), dtype=tf.float32),
         ),
     )
+    .map(rescale, num_parallel_calls=tf.data.AUTOTUNE)
     .batch(batch_size)
     .prefetch(tf.data.AUTOTUNE)
-    # .map(rescale, num_parallel_calls=tf.data.AUTOTUNE)
 )
 val_ds = (
     tf.data.Dataset.from_generator(
         val_gen,
         output_signature=(
+            tf.TensorSpec(
+                shape=(image_size, image_size, num_channels), dtype=tf.float32
+            ),
             tf.TensorSpec(shape=(), dtype=tf.float32),
-            tf.TensorSpec(shape=(None, None, num_channels), dtype=tf.float32),
         ),
     )
+    .map(rescale, num_parallel_calls=tf.data.AUTOTUNE)
     .batch(batch_size)
     .prefetch(tf.data.AUTOTUNE)
-    # .map(rescale, num_parallel_calls=tf.data.AUTOTUNE)
 )
 
 # print(f"Cardinality of train set: {train_ds.cardinality()}")

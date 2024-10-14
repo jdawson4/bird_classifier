@@ -17,7 +17,7 @@ from PIL import Image
 seed = 8
 num_channels = 3
 batch_size = 32
-image_size = 0
+image_size = 500
 train_imgs_folder = "train_imgs/"
 
 initializer = keras.initializers.RandomNormal(seed=seed)
@@ -74,7 +74,7 @@ def downsample(input, filters, size=2, stride=1, apply_batchnorm=True):
 
 
 def model():
-    input = keras.layers.Input(shape=(500, 500, num_channels), dtype=tf.float32)
+    input = keras.layers.Input(shape=(image_size, image_size, num_channels), dtype=tf.float32)
     out = downsample(input=input, filters=16, size=3, apply_batchnorm=False)
     out = downsample(input=out, filters=32, size=3)
     out = downsample(input=out, filters=64, size=3)

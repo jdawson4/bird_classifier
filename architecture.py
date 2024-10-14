@@ -33,6 +33,7 @@ def downsample(input, filters, size=2, stride=1, apply_batchnorm=True):
         kernel_initializer=initializer,
         activation="selu",
     )(input)
+    concat1 = keras.layers.Concatenate()([input, conv1])
     conv2 = keras.layers.Conv2D(
         filters,
         kernel_size=size,
@@ -40,7 +41,8 @@ def downsample(input, filters, size=2, stride=1, apply_batchnorm=True):
         padding="same",
         kernel_initializer=initializer,
         activation="selu",
-    )(conv1)
+    )(concat1)
+    concat2 = keras.layers.Concatenate()([input, conv1, conv2])
     conv3 = keras.layers.Conv2D(
         filters,
         kernel_size=size,
@@ -48,10 +50,10 @@ def downsample(input, filters, size=2, stride=1, apply_batchnorm=True):
         padding="same",
         kernel_initializer=initializer,
         activation="selu",
-    )(conv2)
+    )(concat2)
 
     # concatenate those together
-    out = keras.layers.Concatenate()([conv1, conv2, conv3])
+    out = keras.layers.Concatenate()([input, conv1, conv2, conv3])
 
     # then downsample. Couldn't decide on one method, so do both!
     maxpool_downsample = keras.layers.MaxPool2D(
@@ -74,7 +76,9 @@ def downsample(input, filters, size=2, stride=1, apply_batchnorm=True):
 
 
 def model():
-    input = keras.layers.Input(shape=(image_size, image_size, num_channels), dtype=tf.float32)
+    input = keras.layers.Input(
+        shape=(image_size, image_size, num_channels), dtype=tf.float32
+    )
     out = downsample(input=input, filters=16, size=3, apply_batchnorm=False)
     out = downsample(input=out, filters=32, size=3)
     out = downsample(input=out, filters=64, size=3)

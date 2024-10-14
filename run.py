@@ -119,9 +119,11 @@ def train_gen(type_dir="Masked_Images/train"):
         name_of_bird = dir.split(".")[1]
         number_of_bird = bird_names_to_numbers[name_of_bird]
         for img in os.listdir(f"{type_dir}/{dir}/"):
-            loaded_img = np.array(Image.open(f"{type_dir}/{dir}/{img}"))
-            # print(type(loaded_img),loaded_img.shape, loaded_img.dtype, type(number_of_bird))
-            # <class 'numpy.ndarray'> (223, 320, 3) uint8 <class 'int'>
+            loaded_img = tf.image.resize_with_crop_or_pad(
+                np.array(Image.open(f"{type_dir}/{dir}/{img}"), dtype=np.float32),
+                image_size,
+                image_size,
+            )
             yield loaded_img, number_of_bird
 
 
@@ -130,9 +132,11 @@ def test_gen(type_dir="Masked_Images/test"):
         name_of_bird = dir.split(".")[1]
         number_of_bird = bird_names_to_numbers[name_of_bird]
         for img in os.listdir(f"{type_dir}/{dir}/"):
-            loaded_img = np.array(Image.open(f"{type_dir}/{dir}/{img}"))
-            # print(type(loaded_img),loaded_img.shape, loaded_img.dtype, type(number_of_bird))
-            # <class 'numpy.ndarray'> (223, 320, 3) uint8 <class 'int'>
+            loaded_img = tf.image.resize_with_crop_or_pad(
+                np.array(Image.open(f"{type_dir}/{dir}/{img}"), dtype=np.float32),
+                image_size,
+                image_size,
+            )
             yield loaded_img, number_of_bird
 
 
@@ -141,21 +145,20 @@ def val_gen(type_dir="Masked_Images/val"):
         name_of_bird = dir.split(".")[1]
         number_of_bird = bird_names_to_numbers[name_of_bird]
         for img in os.listdir(f"{type_dir}/{dir}/"):
-            loaded_img = np.array(
-                Image.open(f"{type_dir}/{dir}/{img}"), dtype=np.float32
+            loaded_img = tf.image.resize_with_crop_or_pad(
+                np.array(Image.open(f"{type_dir}/{dir}/{img}"), dtype=np.float32),
+                image_size,
+                image_size,
             )
             yield loaded_img, number_of_bird
 
 
 def rescale(image, label):
-    # TODO: fix this!
-    image = tf.image.resize_with_crop_or_pad(image, image_size, image_size)
     image = image / 255.0
     return image, label
 
 
 def augment(image, label):
-    # TODO: fix this!
     print(tf.shape(image), tf.shape(label))
     image, label = rescale(image, label)
     image = tf.image.stateless_random_crop(
@@ -216,18 +219,20 @@ val_ds = (
 
 bird_model = model()
 bird_model.summary()
-"""
+
 bird_model.compile(
-    optimizer='adam',
-    loss='categorical_crossentropy',
-    metrics=['accuracy']
+    optimizer="adam",
+    loss=keras.losses.SparseCategoricalCrossentropy(),
+    metrics=[
+        "accuracy",
+        tf.keras.metrics.TopKCategoricalAccuracy(k=5, name="top_5_acc"),
+    ],
 )
 
 history = bird_model.fit(
     train_ds,
     validation_data=val_ds,
-    epochs=10,
+    epochs=1,
     verbose=1,
-    callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_loss',patience=10)]
+    callbacks=[tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=10)],
 )
-"""

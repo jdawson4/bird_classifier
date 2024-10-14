@@ -51,19 +51,21 @@ def downsample(input, filters, size=2, stride=1, apply_batchnorm=True):
     )(conv2)
 
     # concatenate those together
-    out = keras.layers.Concatenate()([conv1,conv2,conv3])
+    out = keras.layers.Concatenate()([conv1, conv2, conv3])
 
     # then downsample. Couldn't decide on one method, so do both!
-    maxpool_downsample = keras.layers.MaxPool2D(pool_size=(2,2), strides=(2,2), padding="valid")(out)
+    maxpool_downsample = keras.layers.MaxPool2D(
+        pool_size=(2, 2), strides=(2, 2), padding="valid"
+    )(out)
     conv_downsample = keras.layers.Conv2D(
         filters,
-        kernel_size=(2,2),
+        kernel_size=(2, 2),
         strides=2,
         padding="valid",
         kernel_initializer=initializer,
         activation="selu",
     )(out)
-    out = keras.layers.Concatenate()([maxpool_downsample,conv_downsample])
+    out = keras.layers.Concatenate()([maxpool_downsample, conv_downsample])
 
     # batchnorm if we want
     if apply_batchnorm:
@@ -79,7 +81,7 @@ def model():
     out = downsample(input=out, filters=128, size=3)
     out = keras.layers.Conv2D(
         256,
-        kernel_size=(4,4),
+        kernel_size=(4, 4),
         strides=4,
         padding="valid",
         kernel_initializer=initializer,
@@ -88,7 +90,7 @@ def model():
     out = keras.layers.BatchNormalization()(out)
     out = keras.layers.Conv2D(
         512,
-        kernel_size=(4,4),
+        kernel_size=(4, 4),
         strides=4,
         padding="valid",
         kernel_initializer=initializer,
@@ -96,7 +98,7 @@ def model():
     )(out)
     out = keras.layers.BatchNormalization()(out)
     out = keras.layers.Flatten()(out)
-    out=keras.layers.Dense(units=200)(out)
+    out = keras.layers.Dense(units=200)(out)
     return keras.Model(inputs=input, outputs=out, name="bird_classifier")
 
 
@@ -108,9 +110,9 @@ if __name__ == "__main__":
     # keras.utils.plot_model(m, to_file='bird_classifier_plot.png', show_shapes=True, show_layer_names=False, show_layer_activations=True, expand_nested=True)
 
     # you can use these for reverance if you want:
-    #vgg16 = keras.applications.VGG16()
-    #vgg16.summary()
-    #incresnet = keras.applications.InceptionResNetV2()
-    #incresnet.summary()
-    #resnet = keras.applications.InceptionV3()
-    #resnet.summary()
+    # vgg16 = keras.applications.VGG16()
+    # vgg16.summary()
+    # incresnet = keras.applications.InceptionResNetV2()
+    # incresnet.summary()
+    # resnet = keras.applications.InceptionV3()
+    # resnet.summary()

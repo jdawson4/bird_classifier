@@ -2,8 +2,9 @@
 
 from architecture import *
 
-physical_devices = tf.config.experimental.list_physical_devices("GPU")
-num_gpus = len(physical_devices)
+gpus = tf.config.experimental.list_physical_devices("GPU")
+tf.config.experimental.set_memory_growth(gpus[0], True)
+num_gpus = len(gpus)
 print(f"Number of GPUs available: {num_gpus}")
 
 directories = sorted(
@@ -120,7 +121,7 @@ def train_gen(type_dir="Masked_Images/train"):
         number_of_bird = bird_names_to_numbers[name_of_bird]
         for img in os.listdir(f"{type_dir}/{dir}/"):
             loaded_img = tf.image.resize_with_crop_or_pad(
-                np.array(Image.open(f"{type_dir}/{dir}/{img}"), dtype=np.float32),
+                np.array(Image.open(f"{type_dir}/{dir}/{img}"), dtype=np.float16),
                 image_size,
                 image_size,
             )
@@ -133,7 +134,7 @@ def test_gen(type_dir="Masked_Images/test"):
         number_of_bird = bird_names_to_numbers[name_of_bird]
         for img in os.listdir(f"{type_dir}/{dir}/"):
             loaded_img = tf.image.resize_with_crop_or_pad(
-                np.array(Image.open(f"{type_dir}/{dir}/{img}"), dtype=np.float32),
+                np.array(Image.open(f"{type_dir}/{dir}/{img}"), dtype=np.float16),
                 image_size,
                 image_size,
             )
@@ -146,7 +147,7 @@ def val_gen(type_dir="Masked_Images/val"):
         number_of_bird = bird_names_to_numbers[name_of_bird]
         for img in os.listdir(f"{type_dir}/{dir}/"):
             loaded_img = tf.image.resize_with_crop_or_pad(
-                np.array(Image.open(f"{type_dir}/{dir}/{img}"), dtype=np.float32),
+                np.array(Image.open(f"{type_dir}/{dir}/{img}"), dtype=np.float16),
                 image_size,
                 image_size,
             )
@@ -175,9 +176,9 @@ train_ds = (
         train_gen,
         output_signature=(
             tf.TensorSpec(
-                shape=(image_size, image_size, num_channels), dtype=tf.float32
+                shape=(image_size, image_size, num_channels), dtype=tf.float16
             ),
-            tf.TensorSpec(shape=(), dtype=tf.float32),
+            tf.TensorSpec(shape=(), dtype=tf.float16),
         ),
     )
     .map(rescale, num_parallel_calls=tf.data.AUTOTUNE)
@@ -189,9 +190,9 @@ test_ds = (
         test_gen,
         output_signature=(
             tf.TensorSpec(
-                shape=(image_size, image_size, num_channels), dtype=tf.float32
+                shape=(image_size, image_size, num_channels), dtype=tf.float16
             ),
-            tf.TensorSpec(shape=(), dtype=tf.float32),
+            tf.TensorSpec(shape=(), dtype=tf.float16),
         ),
     )
     .map(rescale, num_parallel_calls=tf.data.AUTOTUNE)
@@ -203,9 +204,9 @@ val_ds = (
         val_gen,
         output_signature=(
             tf.TensorSpec(
-                shape=(image_size, image_size, num_channels), dtype=tf.float32
+                shape=(image_size, image_size, num_channels), dtype=tf.float16
             ),
-            tf.TensorSpec(shape=(), dtype=tf.float32),
+            tf.TensorSpec(shape=(), dtype=tf.float16),
         ),
     )
     .map(rescale, num_parallel_calls=tf.data.AUTOTUNE)
@@ -232,7 +233,14 @@ bird_model.compile(
 history = bird_model.fit(
     train_ds,
     validation_data=val_ds,
-    epochs=1,
+    epochs=num_epochs,
     verbose=1,
-    callbacks=[tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=10)],
+    callbacks=[
+        tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=10),
+        tf.keras.callbacks.ModelCheckpoint(
+            filepath="{epoch:02d}-{val_loss:.2f}.keras",
+            verbose=1,
+            save_freq="epoch",
+        ),
+    ],
 )

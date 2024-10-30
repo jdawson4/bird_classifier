@@ -3,8 +3,9 @@
 from architecture import *
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
-tf.config.experimental.set_memory_growth(gpus[0], True)
 num_gpus = len(gpus)
+if num_gpus:
+    tf.config.experimental.set_memory_growth(gpus[0], True)
 print(f"Number of GPUs available: {num_gpus}")
 
 directories = sorted(
@@ -115,7 +116,7 @@ for dir in os.listdir("Masked_Images/train/"):
 
 # make functions for reading from our train, val, and test directories.
 # Repeated because tf requires this to take no arguments, for some reason.
-def train_gen(type_dir="Masked_Images/train"):
+def data_generator(type_dir):
     for dir in os.listdir(f"{type_dir}/"):
         name_of_bird = dir.split(".")[1]
         number_of_bird = bird_names_to_numbers[name_of_bird]
@@ -128,30 +129,16 @@ def train_gen(type_dir="Masked_Images/train"):
             yield loaded_img, number_of_bird
 
 
-def test_gen(type_dir="Masked_Images/test"):
-    for dir in os.listdir(f"{type_dir}/"):
-        name_of_bird = dir.split(".")[1]
-        number_of_bird = bird_names_to_numbers[name_of_bird]
-        for img in os.listdir(f"{type_dir}/{dir}/"):
-            loaded_img = tf.image.resize_with_crop_or_pad(
-                np.array(Image.open(f"{type_dir}/{dir}/{img}"), dtype=np.float16),
-                image_size,
-                image_size,
-            )
-            yield loaded_img, number_of_bird
+def train_gen():
+    return data_generator("Masked_Images/train")
 
 
-def val_gen(type_dir="Masked_Images/val"):
-    for dir in os.listdir(f"{type_dir}/"):
-        name_of_bird = dir.split(".")[1]
-        number_of_bird = bird_names_to_numbers[name_of_bird]
-        for img in os.listdir(f"{type_dir}/{dir}/"):
-            loaded_img = tf.image.resize_with_crop_or_pad(
-                np.array(Image.open(f"{type_dir}/{dir}/{img}"), dtype=np.float16),
-                image_size,
-                image_size,
-            )
-            yield loaded_img, number_of_bird
+def test_gen():
+    return data_generator("Masked_Images/test")
+
+
+def val_gen():
+    return data_generator("Masked_Images/val")
 
 
 def rescale(image, label):
@@ -160,7 +147,7 @@ def rescale(image, label):
 
 
 def augment(image, label):
-    print(tf.shape(image), tf.shape(label))
+    # print(tf.shape(image), tf.shape(label))
     image, label = rescale(image, label)
     image = tf.image.stateless_random_crop(
         image, size=[image_size, image_size, num_channels], seed=seed
@@ -176,9 +163,9 @@ train_ds = (
         train_gen,
         output_signature=(
             tf.TensorSpec(
-                shape=(image_size, image_size, num_channels), dtype=tf.float16
+                shape=(image_size, image_size, num_channels), dtype=train_type
             ),
-            tf.TensorSpec(shape=(), dtype=tf.float16),
+            tf.TensorSpec(shape=(), dtype=train_type),
         ),
     )
     .map(rescale, num_parallel_calls=tf.data.AUTOTUNE)
@@ -190,9 +177,9 @@ test_ds = (
         test_gen,
         output_signature=(
             tf.TensorSpec(
-                shape=(image_size, image_size, num_channels), dtype=tf.float16
+                shape=(image_size, image_size, num_channels), dtype=train_type
             ),
-            tf.TensorSpec(shape=(), dtype=tf.float16),
+            tf.TensorSpec(shape=(), dtype=train_type),
         ),
     )
     .map(rescale, num_parallel_calls=tf.data.AUTOTUNE)
@@ -204,9 +191,9 @@ val_ds = (
         val_gen,
         output_signature=(
             tf.TensorSpec(
-                shape=(image_size, image_size, num_channels), dtype=tf.float16
+                shape=(image_size, image_size, num_channels), dtype=train_type
             ),
-            tf.TensorSpec(shape=(), dtype=tf.float16),
+            tf.TensorSpec(shape=(), dtype=train_type),
         ),
     )
     .map(rescale, num_parallel_calls=tf.data.AUTOTUNE)
@@ -217,6 +204,12 @@ val_ds = (
 # print(f"Cardinality of train set: {train_ds.cardinality()}")
 # print(f"Cardinality of test set: {test_ds.cardinality()}")
 # print(f"Cardinality of val set: {val_ds.cardinality()}")
+
+# print(f"First item of train set: {train_ds.take(1)}")
+# print(f"First item of test set: {test_ds.take(1)}")
+# print(f"First item of val set: {val_ds.take(1)}")
+# prints this for all three:
+# TensorSpec(shape=(None, 500, 500, 3), dtype=tf.float16, name=None), TensorSpec(shape=(None,), dtype=tf.float16, name=None)
 
 bird_model = model()
 bird_model.summary()
